@@ -8,7 +8,7 @@ import CategoryCard from '@/components/CategoryCard';
 import LocationCard from '@/components/LocationCard';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Flow, Settings } from 'lucide-react';
+import { ChevronRight, BarChart, Settings } from 'lucide-react';
 
 const Index = () => {
   const { apps, categories, locations, loading } = useAppContext();
@@ -46,7 +46,7 @@ const Index = () => {
                 </Button>
                 <Button size="lg" variant="outline" asChild>
                   <Link to="/flowchart">
-                    <Flow className="mr-2 h-5 w-5" />
+                    <BarChart className="mr-2 h-5 w-5" />
                     App Flowchart
                   </Link>
                 </Button>
@@ -148,14 +148,14 @@ const Index = () => {
                 </ul>
                 <Button className="mt-8" asChild>
                   <Link to="/flowchart">
-                    <Flow className="mr-2 h-5 w-5" />
+                    <BarChart className="mr-2 h-5 w-5" />
                     Try App Flowchart
                   </Link>
                 </Button>
               </div>
               <div className="bg-muted aspect-video rounded-lg flex items-center justify-center">
                 <div className="text-center p-8">
-                  <Flow className="h-16 w-16 text-primary/40 mx-auto" />
+                  <BarChart className="h-16 w-16 text-primary/40 mx-auto" />
                   <p className="mt-4 text-muted-foreground font-medium">Interactive Flowchart Preview</p>
                 </div>
               </div>
