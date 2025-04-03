@@ -21,7 +21,9 @@ const Index = () => {
     );
   }
 
-  const featuredApps = apps.slice(0, 6);
+  // Get top-level apps (apps without a parent or are bundles themselves)
+  const topLevelApps = apps.filter(app => !app.parentAppId);
+  const featuredApps = topLevelApps.slice(0, 6);
   const featuredCategories = categories.slice(0, 3);
   const featuredLocations = locations.slice(0, 3);
 

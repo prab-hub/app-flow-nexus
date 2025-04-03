@@ -6,7 +6,8 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ExternalLink, Package } from 'lucide-react';
+import AppGrid from '@/components/AppGrid';
 
 const AppDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -42,6 +43,16 @@ const AppDetailPage = () => {
     ? apps.filter(a => app.connectedApps?.includes(a.id))
     : [];
   
+  // Get child apps if this is a bundle
+  const childApps = app.childAppIds?.length
+    ? apps.filter(a => app.childAppIds?.includes(a.id))
+    : [];
+    
+  // Get parent app if this is a child app in a bundle
+  const parentApp = app.parentAppId
+    ? apps.find(a => a.id === app.parentAppId)
+    : null;
+  
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -68,7 +79,26 @@ const AppDetailPage = () => {
               </div>
               
               <div className="flex-1">
-                <h1 className="text-3xl md:text-4xl font-bold">{app.title}</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-3xl md:text-4xl font-bold">{app.title}</h1>
+                  {app.isBundle && (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <Package className="h-4 w-4" />
+                      Bundle
+                    </Badge>
+                  )}
+                </div>
+                
+                {parentApp && (
+                  <div className="mt-2">
+                    <Badge variant="secondary">
+                      <Link to={`/app/${parentApp.slug}`} className="flex items-center gap-1">
+                        Part of {parentApp.title}
+                      </Link>
+                    </Badge>
+                  </div>
+                )}
+                
                 <div className="flex flex-wrap gap-2 mt-3">
                   {appCategories.map(category => (
                     <Badge key={category.id} variant="secondary">
@@ -92,6 +122,14 @@ const AppDetailPage = () => {
         <div className="container px-4 py-12">
           <div className="grid md:grid-cols-3 gap-8">
             <div className="md:col-span-2 space-y-8">
+              {/* Child Apps - only shown for bundle apps */}
+              {app.isBundle && childApps.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-4">Included Apps</h2>
+                  <AppGrid apps={childApps} />
+                </div>
+              )}
+              
               {/* Features */}
               <div>
                 <h2 className="text-2xl font-bold mb-4">Features</h2>

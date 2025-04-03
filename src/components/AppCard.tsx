@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { App } from '@/lib/db-types';
 import { useAppContext } from '@/context/AppContext';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Package } from 'lucide-react';
 
 interface AppCardProps {
   app: App;
@@ -35,7 +35,20 @@ const AppCard: React.FC<AppCardProps> = ({ app }) => {
             />
           </div>
           <div>
-            <h3 className="font-medium text-lg line-clamp-1">{app.title}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium text-lg line-clamp-1">{app.title}</h3>
+              {app.isBundle && (
+                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Package className="h-3 w-3" />
+                  Bundle
+                </Badge>
+              )}
+              {app.parentAppId && (
+                <Badge variant="secondary" className="text-xs">
+                  Part of a bundle
+                </Badge>
+              )}
+            </div>
             <div className="flex flex-wrap gap-1 mt-1">
               {appCategories.map((category) => (
                 <Badge key={category} variant="secondary" className="text-xs">
