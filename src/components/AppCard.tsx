@@ -50,6 +50,11 @@ const AppCard: React.FC<AppCardProps> = ({ app }) => {
               )}
             </div>
             <div className="flex flex-wrap gap-1 mt-1">
+              {app.publisher && (
+                <Badge variant="outline" className="text-xs">
+                  {app.publisher}
+                </Badge>
+              )}
               {appCategories.map((category) => (
                 <Badge key={category} variant="secondary" className="text-xs">
                   {category}
