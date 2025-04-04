@@ -23,6 +23,12 @@ import '@xyflow/react/dist/style.css';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 
+// Define proper edge style type to include strokeDasharray
+interface EdgeStyle {
+  stroke: string;
+  strokeDasharray?: string;
+}
+
 const FlowchartPage = () => {
   const { apps } = useAppContext();
   const [selectedApp, setSelectedApp] = useState(null);
@@ -89,7 +95,7 @@ const FlowchartPage = () => {
             source: app.id,
             target: targetId,
             animated: false,
-            style: { stroke: '#64748b' }
+            style: { stroke: '#64748b' } as EdgeStyle
           });
         });
       }
@@ -102,7 +108,7 @@ const FlowchartPage = () => {
             source: app.id,
             target: childId,
             animated: true,
-            style: { stroke: '#3b82f6' }
+            style: { stroke: '#3b82f6' } as EdgeStyle
           });
         });
       }
@@ -114,7 +120,7 @@ const FlowchartPage = () => {
           source: app.id,
           target: app.replacementFor,
           animated: false,
-          style: { stroke: '#f43f5e', strokeDasharray: '5,5' },
+          style: { stroke: '#f43f5e', strokeDasharray: '5,5' } as EdgeStyle,
           label: 'Replaces',
           labelStyle: { fill: '#f43f5e', fontWeight: 500 }
         });
@@ -210,18 +216,18 @@ const FlowchartPage = () => {
     if (selectedEdge) {
       setEdges(eds => eds.map(ed => {
         if (ed.id === selectedEdge.id) {
-          let style = { ...ed.style };
+          let style: EdgeStyle = { ...ed.style } as EdgeStyle;
           let animated = false;
           
           switch(type) {
             case 'integrate':
               style.stroke = '#64748b';
-              style.strokeDasharray = null;
+              style.strokeDasharray = undefined;
               animated = false;
               break;
             case 'bundle':
               style.stroke = '#3b82f6';
-              style.strokeDasharray = null;
+              style.strokeDasharray = undefined;
               animated = true;
               break;
             case 'replace':
@@ -248,7 +254,7 @@ const FlowchartPage = () => {
 
   const handleCreateConnection = useCallback(() => {
     if (connectionSource && connectionTarget) {
-      let style = { stroke: '#64748b' };
+      let style: EdgeStyle = { stroke: '#64748b' };
       let animated = false;
       let label = '';
       let labelStyle = null;
