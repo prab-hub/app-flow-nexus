@@ -21,8 +21,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 const AppsPage = () => {
   const { apps, categories, locations } = useAppContext();
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [selectedCategory, setSelectedCategory] = React.useState('');
-  const [selectedLocation, setSelectedLocation] = React.useState('');
+  const [selectedCategory, setSelectedCategory] = React.useState('all');
+  const [selectedLocation, setSelectedLocation] = React.useState('all');
   
   // Filter apps based on search term, category, and location
   const filteredApps = apps.filter(app => {
@@ -30,10 +30,10 @@ const AppsPage = () => {
       app.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
       app.description.toLowerCase().includes(searchTerm.toLowerCase());
       
-    const matchesCategory = selectedCategory === '' || 
+    const matchesCategory = selectedCategory === 'all' || 
       app.categoryIds.includes(selectedCategory);
       
-    const matchesLocation = selectedLocation === '' || 
+    const matchesLocation = selectedLocation === 'all' || 
       app.locationIds.includes(selectedLocation);
       
     return matchesSearch && matchesCategory && matchesLocation;
@@ -42,8 +42,8 @@ const AppsPage = () => {
   // Clear all filters
   const clearFilters = () => {
     setSearchTerm('');
-    setSelectedCategory('');
-    setSelectedLocation('');
+    setSelectedCategory('all');
+    setSelectedLocation('all');
   };
 
   // Get category or location name by id
@@ -57,7 +57,7 @@ const AppsPage = () => {
     return location ? location.name : '';
   };
   
-  const hasActiveFilters = searchTerm || selectedCategory || selectedLocation;
+  const hasActiveFilters = searchTerm || selectedCategory !== 'all' || selectedLocation !== 'all';
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -132,7 +132,7 @@ const AppsPage = () => {
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     {categories.map(category => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
@@ -149,7 +149,7 @@ const AppsPage = () => {
                     <SelectValue placeholder="All Locations" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Locations</SelectItem>
+                    <SelectItem value="all">All Locations</SelectItem>
                     {locations.map(location => (
                       <SelectItem key={location.id} value={location.id}>
                         {location.name}
@@ -177,22 +177,22 @@ const AppsPage = () => {
                   </Badge>
                 )}
                 
-                {selectedCategory && (
+                {selectedCategory !== 'all' && (
                   <Badge variant="secondary" className="flex items-center gap-1">
                     Category: {getCategoryName(selectedCategory)}
                     <X 
                       className="h-3 w-3 ml-1 cursor-pointer" 
-                      onClick={() => setSelectedCategory('')}
+                      onClick={() => setSelectedCategory('all')}
                     />
                   </Badge>
                 )}
                 
-                {selectedLocation && (
+                {selectedLocation !== 'all' && (
                   <Badge variant="secondary" className="flex items-center gap-1">
                     Location: {getLocationName(selectedLocation)}
                     <X 
                       className="h-3 w-3 ml-1 cursor-pointer" 
-                      onClick={() => setSelectedLocation('')}
+                      onClick={() => setSelectedLocation('all')}
                     />
                   </Badge>
                 )}
