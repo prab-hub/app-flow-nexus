@@ -5,14 +5,18 @@ import AppCard from './AppCard';
 
 interface AppGridProps {
   apps: App[];
-  emptyMessage?: string;
+  emptyMessage?: React.ReactNode;
 }
 
 const AppGrid: React.FC<AppGridProps> = ({ apps, emptyMessage = "No apps found" }) => {
   if (apps.length === 0) {
     return (
       <div className="py-12 text-center">
-        <p className="text-muted-foreground">{emptyMessage}</p>
+        {typeof emptyMessage === 'string' ? (
+          <p className="text-muted-foreground">{emptyMessage}</p>
+        ) : (
+          emptyMessage
+        )}
       </div>
     );
   }
