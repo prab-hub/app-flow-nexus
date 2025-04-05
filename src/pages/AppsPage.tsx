@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Search, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const AppsPage = () => {
   const { apps, categories, locations } = useAppContext();
