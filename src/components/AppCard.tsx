@@ -20,6 +20,26 @@ const AppCard: React.FC<AppCardProps> = ({ app }) => {
     .filter(category => app.categoryIds.includes(category.id))
     .map(category => category.name);
 
+  // Function to get appropriate logo: use company logo for bundled apps if main logo fails
+  const handleLogoError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement;
+    
+    // For bundled apps, try to use company logo if main logo fails
+    if (app.isBundle && app.publisher) {
+      // Construct a URL based on publisher name
+      const companyLogoUrl = `/company-logos/${app.publisher.toLowerCase().replace(/\s+/g, '-')}.png`;
+      target.src = companyLogoUrl;
+      
+      // Add a second error handler for the company logo fallback
+      target.onerror = () => {
+        target.src = '/placeholder.svg';
+        target.onerror = null; // Prevent infinite loop
+      };
+    } else {
+      target.src = '/placeholder.svg';
+    }
+  };
+
   return (
     <Card className="overflow-hidden app-card h-full flex flex-col">
       <CardHeader className="p-4 space-y-2">
@@ -29,9 +49,7 @@ const AppCard: React.FC<AppCardProps> = ({ app }) => {
               src={app.logoUrl} 
               alt={`${app.title} logo`}
               className="w-10 h-10 object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/placeholder.svg';
-              }}
+              onError={handleLogoError}
             />
           </div>
           <div>

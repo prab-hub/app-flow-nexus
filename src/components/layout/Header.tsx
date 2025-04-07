@@ -67,7 +67,7 @@ const Header: React.FC = () => {
             <Link to="/flowchart" className="text-sm font-medium transition-colors hover:text-primary">
               Flowchart
             </Link>
-            {/* Admin link removed from the visible navigation */}
+            {/* Admin link is completely removed */}
           </nav>
         </div>
 
@@ -161,7 +161,7 @@ const Header: React.FC = () => {
                   <SheetClose asChild>
                     <Link to="/flowchart" className="font-medium">Flowchart</Link>
                   </SheetClose>
-                  {/* Admin link removed from mobile menu as well */}
+                  {/* Admin link is completely removed from mobile menu as well */}
                   <div className="relative">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
