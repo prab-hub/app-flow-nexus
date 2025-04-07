@@ -16,7 +16,8 @@ import {
   ConnectionLineType,
   Panel,
   Connection,
-  Edge
+  Edge,
+  Node
 } from '@xyflow/react';
 import { Plus, Pencil, Trash, ArrowRight } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
@@ -44,90 +45,15 @@ const FlowchartPage = () => {
   const [connectionSource, setConnectionSource] = useState(null);
   const [connectionTarget, setConnectionTarget] = useState(null);
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [showAppsCircle, setShowAppsCircle] = useState(false);
+  const [selectedBundleId, setSelectedBundleId] = useState(null);
   const reactFlowWrapper = useRef(null);
   
-  // Find apps with connection data
-  const appsWithConnections = useMemo(() => {
-    return apps.filter(app => app.connectedApps?.length > 0 || app.childAppIds?.length > 0);
-  }, [apps]);
+  // Generate initial nodes - now empty array
+  const initialNodes = useMemo(() => [], []);
 
-  // Generate nodes from apps
-  const initialNodes = useMemo(() => {
-    return apps.map((app, index) => {
-      // Calculate position to spread the nodes
-      const row = Math.floor(index / 5);
-      const column = index % 5;
-      
-      return {
-        id: app.id,
-        type: 'default',
-        data: { 
-          label: (
-            <div className="flex flex-col items-center">
-              <img 
-                src={app.logoUrl} 
-                alt={app.title}
-                className="w-8 h-8 mb-1 object-contain"
-              />
-              <div className="text-sm font-medium">{app.title}</div>
-            </div>
-          ) 
-        },
-        position: { x: column * 200 + 100, y: row * 150 + 100 },
-        style: {
-          width: 150,
-          background: app.isBundle ? '#f0f9ff' : '#ffffff',
-          border: app.isBundle ? '1px solid #93c5fd' : '1px solid #e5e7eb'
-        }
-      };
-    });
-  }, [apps]);
-
-  // Generate edges from connections
-  const initialEdges = useMemo(() => {
-    const edges = [];
-    apps.forEach(app => {
-      // Add edges for explicit connections
-      if (app.connectedApps?.length > 0) {
-        app.connectedApps.forEach(targetId => {
-          edges.push({
-            id: `${app.id}-${targetId}`,
-            source: app.id,
-            target: targetId,
-            animated: false,
-            style: { stroke: '#64748b' } as EdgeStyle
-          });
-        });
-      }
-      
-      // Add edges for parent-child relationships
-      if (app.childAppIds?.length > 0) {
-        app.childAppIds.forEach(childId => {
-          edges.push({
-            id: `${app.id}-${childId}`,
-            source: app.id,
-            target: childId,
-            animated: true,
-            style: { stroke: '#3b82f6' } as EdgeStyle
-          });
-        });
-      }
-      
-      // Add edges for replacement apps
-      if (app.replacementFor) {
-        edges.push({
-          id: `replacement-${app.id}-${app.replacementFor}`,
-          source: app.id,
-          target: app.replacementFor,
-          animated: false,
-          style: { stroke: '#f43f5e', strokeDasharray: '5,5' } as EdgeStyle,
-          label: 'Replaces',
-          labelStyle: { fill: '#f43f5e', fontWeight: 500 }
-        });
-      }
-    });
-    return edges;
-  }, [apps]);
+  // Generate initial edges - now empty array
+  const initialEdges = useMemo(() => [], []);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -139,6 +65,11 @@ const FlowchartPage = () => {
     )),
     [setEdges, edgeType]
   );
+
+  // Get bundle apps
+  const bundleApps = useMemo(() => {
+    return apps.filter(app => app.isBundle);
+  }, [apps]);
 
   const onNodeClick = useCallback((_, node) => {
     if (!isEditing) {
@@ -164,6 +95,97 @@ const FlowchartPage = () => {
       app.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [apps, searchTerm]);
+
+  // Add a bundle node to the center
+  const handleAddBundleNode = useCallback((app) => {
+    // Clear existing nodes and edges
+    setNodes([]);
+    setEdges([]);
+    
+    // Add the bundle node at center
+    const bundleNode = {
+      id: app.id,
+      type: 'default',
+      data: { 
+        label: (
+          <div className="flex flex-col items-center">
+            <img 
+              src={app.logoUrl} 
+              alt={app.title}
+              className="w-8 h-8 mb-1 object-contain"
+            />
+            <div className="text-sm font-medium">{app.title}</div>
+          </div>
+        ) 
+      },
+      position: { x: 400, y: 300 },
+      style: {
+        width: 150,
+        background: '#f0f9ff',
+        border: '1px solid #93c5fd'
+      }
+    };
+    
+    setNodes([bundleNode]);
+    setSelectedBundleId(app.id);
+    setShowAppsCircle(true);
+    
+    // If the app has childAppIds, show them in a circle
+    if (app.childAppIds && app.childAppIds.length > 0) {
+      const childNodes = [];
+      const childEdges = [];
+      
+      const radius = 250;
+      const childCount = app.childAppIds.length;
+      
+      app.childAppIds.forEach((childId, index) => {
+        const childApp = apps.find(a => a.id === childId);
+        if (childApp) {
+          // Calculate position in a circle around the bundle
+          const angle = (index / childCount) * 2 * Math.PI;
+          const x = 400 + radius * Math.cos(angle);
+          const y = 300 + radius * Math.sin(angle);
+          
+          const childNode = {
+            id: childApp.id,
+            type: 'default',
+            data: { 
+              label: (
+                <div className="flex flex-col items-center">
+                  <img 
+                    src={childApp.logoUrl} 
+                    alt={childApp.title}
+                    className="w-8 h-8 mb-1 object-contain"
+                  />
+                  <div className="text-sm font-medium">{childApp.title}</div>
+                </div>
+              ) 
+            },
+            position: { x, y },
+            style: {
+              width: 150,
+              background: '#ffffff',
+              border: '1px solid #e5e7eb'
+            }
+          };
+          
+          childNodes.push(childNode);
+          
+          // Add edge from bundle to child
+          childEdges.push({
+            id: `${app.id}-${childApp.id}`,
+            source: app.id,
+            target: childApp.id,
+            animated: true,
+            style: { stroke: '#3b82f6' } as EdgeStyle
+          });
+        }
+      });
+      
+      setNodes(nodes => [...nodes, ...childNodes]);
+      setEdges(childEdges);
+    }
+  }, [apps, setNodes, setEdges]);
 
   const handleAddNode = useCallback((app) => {
     // Calculate a position that's not occupied by other nodes
@@ -300,87 +322,139 @@ const FlowchartPage = () => {
           <div className="container px-4">
             <h1 className="text-3xl md:text-4xl font-bold">App Relationships Flowchart</h1>
             <p className="text-muted-foreground mt-4 max-w-3xl">
-              Visualize how different applications connect and work together. See replacement options and bundle relationships.
+              Visualize how different applications connect and work together. Click on any bundle app to see its components in a circle.
             </p>
           </div>
         </div>
         
         <div className="container px-4 py-8">
-          <div className="bg-background border rounded-lg h-[70vh]" ref={reactFlowWrapper}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={onNodeClick}
-              onEdgeClick={onEdgeClick}
-              connectionLineType={ConnectionLineType.SmoothStep}
-              fitView
-              deleteKeyCode="Delete"
-            >
-              <Panel position="top-left" className="bg-background p-3 rounded-md shadow-sm border">
-                <div className="text-sm mb-2">
-                  <span className="font-semibold">Legend:</span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 bg-[#3b82f6]"></div>
-                    <span className="text-xs">Bundle relationship</span>
+          {nodes.length === 0 && (
+            <div className="bg-background border rounded-lg h-[70vh] flex flex-col items-center justify-center">
+              <h2 className="text-2xl font-semibold mb-4">Start by selecting a bundle app</h2>
+              <div className="flex flex-wrap gap-4 max-w-3xl justify-center">
+                {bundleApps.map(app => (
+                  <Button 
+                    key={app.id} 
+                    variant="outline" 
+                    className="flex flex-col items-center p-4 h-auto"
+                    onClick={() => handleAddBundleNode(app)}
+                  >
+                    <img 
+                      src={app.logoUrl} 
+                      alt={app.title}
+                      className="w-12 h-12 mb-2 object-contain" 
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (app.publisher) {
+                          const companyLogoUrl = `/company-logos/${app.publisher.toLowerCase().replace(/\s+/g, '-')}.png`;
+                          target.src = companyLogoUrl;
+                          target.onerror = () => {
+                            target.src = '/placeholder.svg';
+                            target.onerror = null;
+                          };
+                        } else {
+                          target.src = '/placeholder.svg';
+                        }
+                      }}
+                    />
+                    <span>{app.title}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {nodes.length > 0 && (
+            <div className="bg-background border rounded-lg h-[70vh]" ref={reactFlowWrapper}>
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={onNodeClick}
+                onEdgeClick={onEdgeClick}
+                connectionLineType={ConnectionLineType.SmoothStep}
+                fitView
+                deleteKeyCode="Delete"
+              >
+                <Panel position="top-left" className="bg-background p-3 rounded-md shadow-sm border">
+                  <div className="text-sm mb-2">
+                    <span className="font-semibold">Legend:</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 bg-[#64748b]"></div>
-                    <span className="text-xs">Integrates with</span>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-0.5 bg-[#3b82f6]"></div>
+                      <span className="text-xs">Bundle relationship</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-0.5 bg-[#64748b]"></div>
+                      <span className="text-xs">Integrates with</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-0.5 bg-[#f43f5e] border-t border-dashed"></div>
+                      <span className="text-xs">Replaces</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 bg-[#f43f5e] border-t border-dashed"></div>
-                    <span className="text-xs">Replaces</span>
-                  </div>
-                </div>
-              </Panel>
-              
-              <Panel position="top-right" className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant={isEditing ? "default" : "outline"}
-                  onClick={() => setIsEditing(!isEditing)}
-                >
-                  <Pencil className="h-4 w-4 mr-1" />
-                  {isEditing ? "Exit Edit Mode" : "Edit"}
-                </Button>
-                {isEditing && (
-                  <>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setIsAddingNode(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add App
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setConnectDialogOpen(true)}
-                    >
-                      <ArrowRight className="h-4 w-4 mr-1" />
-                      Connect
-                    </Button>
-                  </>
-                )}
-              </Panel>
-              
-              <Controls />
-              <MiniMap />
-              <Background />
-            </ReactFlow>
-          </div>
+                </Panel>
+                
+                <Panel position="top-right" className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="default"
+                    onClick={() => {
+                      setNodes([]);
+                      setEdges([]);
+                      setSelectedBundleId(null);
+                      setShowAppsCircle(false);
+                    }}
+                  >
+                    Reset
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant={isEditing ? "default" : "outline"}
+                    onClick={() => setIsEditing(!isEditing)}
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    {isEditing ? "Exit Edit Mode" : "Edit"}
+                  </Button>
+                  {isEditing && (
+                    <>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setIsAddingNode(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add App
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setConnectDialogOpen(true)}
+                      >
+                        <ArrowRight className="h-4 w-4 mr-1" />
+                        Connect
+                      </Button>
+                    </>
+                  )}
+                </Panel>
+                
+                <Controls />
+                <MiniMap />
+                <Background />
+              </ReactFlow>
+            </div>
+          )}
           
           <div className="mt-6 text-sm text-muted-foreground">
             <p>
               {isEditing 
                 ? "Edit mode: Click apps to select, drag to reposition. Use buttons to add apps or create connections."
-                : "Click on any app to see more details. Drag to reposition the view."
+                : nodes.length > 0 
+                  ? "Click on any app to see more details. Drag to reposition the view."
+                  : "Select a bundle app above to see its components."
               }
             </p>
           </div>
