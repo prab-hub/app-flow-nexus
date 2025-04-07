@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -70,14 +70,42 @@ const FlowchartPage = () => {
     return apps.filter(app => app.isBundle);
   }, [apps]);
 
+  const onNodeClick = useCallback((_, node) => {
+    if (!isEditing) {
+      const appData = apps.find(app => app.id === node.id);
+      if (appData) {
+        setSelectedApp(appData);
+        setOpenDialog(true);
+      }
+    } else {
+      // In edit mode, when clicking on a bundle app node, display its child apps
+      const appData = apps.find(app => app.id === node.id);
+      if (appData && appData.isBundle) {
+        displayBundleChildApps(appData);
+      }
+    }
+  }, [apps, isEditing]);
+
+  const onEdgeClick = useCallback((event, edge) => {
+    if (isEditing) {
+      event.stopPropagation();
+      setSelectedEdge(edge);
+      setOpenEdgeDialog(true);
+    }
+  }, [isEditing]);
+
+  const filteredApps = useMemo(() => {
+    return apps.filter(app => 
+      app.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [apps, searchTerm]);
+
   // Display a bundle's child apps in a circle
   const displayBundleChildApps = useCallback((bundleApp) => {
     if (!bundleApp.childAppIds || bundleApp.childAppIds.length === 0) {
-      console.log('No child apps found for bundle:', bundleApp.title);
       return;
     }
-    
-    console.log('Displaying child apps for bundle:', bundleApp.title, 'Children:', bundleApp.childAppIds);
     
     // Check if child nodes are already displayed
     const childNodesExist = nodes.some(node => 
@@ -86,7 +114,6 @@ const FlowchartPage = () => {
     );
     
     if (childNodesExist) {
-      console.log('Child nodes already exist, not adding again');
       return; // Child nodes are already displayed
     }
     
@@ -98,10 +125,7 @@ const FlowchartPage = () => {
     
     // Get the bundle node position
     const bundleNode = nodes.find(node => node.id === bundleApp.id);
-    if (!bundleNode) {
-      console.error('Bundle node not found in nodes array');
-      return;
-    }
+    if (!bundleNode) return;
     
     const centerX = bundleNode.position.x;
     const centerY = bundleNode.position.y;
@@ -150,51 +174,15 @@ const FlowchartPage = () => {
       }
     });
     
-    console.log(`Adding ${childNodes.length} child nodes and ${childEdges.length} edges`);
-    
-    setNodes(currentNodes => [...currentNodes, ...childNodes]);
-    setEdges(currentEdges => [...currentEdges, ...childEdges]);
+    setNodes(nodes => [...nodes, ...childNodes]);
+    setEdges(edges => [...edges, ...childEdges]);
   }, [apps, nodes, edges, setNodes, setEdges]);
-
-  const onNodeClick = useCallback((_, node) => {
-    if (!isEditing) {
-      const appData = apps.find(app => app.id === node.id);
-      if (appData) {
-        setSelectedApp(appData);
-        setOpenDialog(true);
-      }
-    } else {
-      // In edit mode, when clicking on a bundle app node, display its child apps
-      const appData = apps.find(app => app.id === node.id);
-      if (appData && appData.isBundle) {
-        console.log('Bundle app clicked in edit mode:', appData.title);
-        displayBundleChildApps(appData);
-      }
-    }
-  }, [apps, isEditing, displayBundleChildApps]);
-
-  const onEdgeClick = useCallback((event, edge) => {
-    if (isEditing) {
-      event.stopPropagation();
-      setSelectedEdge(edge);
-      setOpenEdgeDialog(true);
-    }
-  }, [isEditing]);
-
-  const filteredApps = useMemo(() => {
-    return apps.filter(app => 
-      app.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [apps, searchTerm]);
 
   // Add a bundle node to the center
   const handleAddBundleNode = useCallback((app) => {
     // Clear existing nodes and edges
     setNodes([]);
     setEdges([]);
-    
-    console.log('Adding bundle node:', app.title, 'Child apps:', app.childAppIds);
     
     // Add the bundle node at center
     const bundleNode = {
@@ -224,14 +212,62 @@ const FlowchartPage = () => {
     setSelectedBundleId(app.id);
     setShowAppsCircle(true);
     
-    // If the app has childAppIds, show them in a circle after the bundle node has been added
+    // If the app has childAppIds, show them in a circle
     if (app.childAppIds && app.childAppIds.length > 0) {
-      setTimeout(() => {
-        // We need to create a complete bundle app object for displayBundleChildApps
-        displayBundleChildApps(app);
-      }, 100);
+      const childNodes = [];
+      const childEdges = [];
+      
+      const radius = 250;
+      const childCount = app.childAppIds.length;
+      
+      app.childAppIds.forEach((childId, index) => {
+        const childApp = apps.find(a => a.id === childId);
+        if (childApp) {
+          // Calculate position in a circle around the bundle
+          const angle = (index / childCount) * 2 * Math.PI;
+          const x = 400 + radius * Math.cos(angle);
+          const y = 300 + radius * Math.sin(angle);
+          
+          const childNode = {
+            id: childApp.id,
+            type: 'default',
+            data: { 
+              label: (
+                <div className="flex flex-col items-center">
+                  <img 
+                    src={childApp.logoUrl} 
+                    alt={childApp.title}
+                    className="w-8 h-8 mb-1 object-contain"
+                  />
+                  <div className="text-sm font-medium">{childApp.title}</div>
+                </div>
+              ) 
+            },
+            position: { x, y },
+            style: {
+              width: 150,
+              background: '#ffffff',
+              border: '1px solid #e5e7eb'
+            }
+          };
+          
+          childNodes.push(childNode);
+          
+          // Add edge from bundle to child
+          childEdges.push({
+            id: `${app.id}-${childApp.id}`,
+            source: app.id,
+            target: childApp.id,
+            animated: true,
+            style: { stroke: '#3b82f6' } as EdgeStyle
+          });
+        }
+      });
+      
+      setNodes(nodes => [...nodes, ...childNodes]);
+      setEdges(childEdges);
     }
-  }, [apps, setNodes, setEdges, displayBundleChildApps]);
+  }, [apps, setNodes, setEdges]);
 
   const handleAddNode = useCallback((app) => {
     // Calculate a position that's not occupied by other nodes
@@ -272,13 +308,6 @@ const FlowchartPage = () => {
       }, 100);
     }
   }, [setNodes, displayBundleChildApps]);
-
-  // Effect to ensure edit mode when a bundle node is added
-  useEffect(() => {
-    if (selectedBundleId && !isEditing) {
-      setIsEditing(true);
-    }
-  }, [selectedBundleId, isEditing]);
 
   const handleDeleteNode = useCallback(() => {
     if (itemToDelete.type === 'node') {
