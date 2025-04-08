@@ -9,6 +9,10 @@ interface EdgeStyle {
   strokeDasharray?: string;
 }
 
+interface NodeData {
+  label: React.ReactNode;
+}
+
 export const useFlowchart = () => {
   const { apps } = useAppContext();
   const [edgeType, setEdgeType] = useState('default');
@@ -167,16 +171,7 @@ export const useFlowchart = () => {
           id: childApp.id,
           type: 'default',
           data: { 
-            label: (
-              <div className="flex flex-col items-center">
-                <img 
-                  src={childApp.logoUrl} 
-                  alt={childApp.title}
-                  className="w-8 h-8 mb-1 object-contain"
-                />
-                <div className="text-sm font-medium">{childApp.title}</div>
-              </div>
-            ) 
+            label: `${childApp.title}` 
           },
           position: { x, y },
           style: getNodeStyleForCategory(childApp.id, appCategories, false)
@@ -212,16 +207,7 @@ export const useFlowchart = () => {
       id: app.id,
       type: 'default',
       data: { 
-        label: (
-          <div className="flex flex-col items-center">
-            <img 
-              src={app.logoUrl} 
-              alt={app.title}
-              className="w-8 h-8 mb-1 object-contain"
-            />
-            <div className="text-sm font-medium">{app.title}</div>
-          </div>
-        ) 
+        label: `${app.title}`
       },
       position: { x: 400, y: 300 },
       style: getNodeStyleForCategory(app.id, appCategories, true)
@@ -249,16 +235,7 @@ export const useFlowchart = () => {
             id: childApp.id,
             type: 'default',
             data: { 
-              label: (
-                <div className="flex flex-col items-center">
-                  <img 
-                    src={childApp.logoUrl} 
-                    alt={childApp.title}
-                    className="w-8 h-8 mb-1 object-contain"
-                  />
-                  <div className="text-sm font-medium">{childApp.title}</div>
-                </div>
-              ) 
+              label: `${childApp.title}`
             },
             position: { x, y },
             style: getNodeStyleForCategory(childApp.id, appCategories, false)
@@ -293,16 +270,7 @@ export const useFlowchart = () => {
       id: app.id,
       type: 'default',
       data: { 
-        label: (
-          <div className="flex flex-col items-center">
-            <img 
-              src={app.logoUrl} 
-              alt={app.title}
-              className="w-8 h-8 mb-1 object-contain"
-            />
-            <div className="text-sm font-medium">{app.title}</div>
-          </div>
-        ) 
+        label: `${app.title}`
       },
       position: { x: xPos, y: yPos },
       style: getNodeStyleForCategory(app.id, appCategories, app.isBundle)
