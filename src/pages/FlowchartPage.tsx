@@ -23,7 +23,6 @@ import '@xyflow/react/dist/style.css';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 
-// Define proper edge style type to include strokeDasharray
 interface EdgeStyle {
   stroke: string;
   strokeDasharray?: string;
@@ -48,10 +47,7 @@ const FlowchartPage = () => {
   const [selectedBundleId, setSelectedBundleId] = useState(null);
   const reactFlowWrapper = useRef(null);
   
-  // Generate initial nodes - now empty array
   const initialNodes = useMemo(() => [], []);
-
-  // Generate initial edges - now empty array
   const initialEdges = useMemo(() => [], []);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -65,7 +61,6 @@ const FlowchartPage = () => {
     [setEdges, edgeType]
   );
 
-  // Get bundle apps
   const bundleApps = useMemo(() => {
     return apps.filter(app => app.isBundle);
   }, [apps]);
@@ -78,13 +73,23 @@ const FlowchartPage = () => {
         setOpenDialog(true);
       }
     } else {
-      // In edit mode, when clicking on a bundle app node, display its child apps
+      if (!isEditing) {
+        setIsEditing(true);
+      }
+      
       const appData = apps.find(app => app.id === node.id);
       if (appData && appData.isBundle) {
-        displayBundleChildApps(appData);
+        const childNodesExist = nodes.some(n => 
+          appData.childAppIds && appData.childAppIds.includes(n.id) && 
+          edges.some(e => e.source === appData.id && e.target === n.id)
+        );
+        
+        if (!childNodesExist) {
+          displayBundleChildApps(appData);
+        }
       }
     }
-  }, [apps, isEditing]);
+  }, [apps, isEditing, nodes, edges]);
 
   const onEdgeClick = useCallback((event, edge) => {
     if (isEditing) {
@@ -101,20 +106,22 @@ const FlowchartPage = () => {
     );
   }, [apps, searchTerm]);
 
-  // Display a bundle's child apps in a circle
   const displayBundleChildApps = useCallback((bundleApp) => {
     if (!bundleApp.childAppIds || bundleApp.childAppIds.length === 0) {
+      console.log(`Bundle app ${bundleApp.id} has no child apps`);
       return;
     }
     
-    // Check if child nodes are already displayed
+    console.log(`Displaying child apps for bundle: ${bundleApp.id}`, bundleApp.childAppIds);
+    
     const childNodesExist = nodes.some(node => 
       bundleApp.childAppIds.includes(node.id) && 
       edges.some(edge => edge.source === bundleApp.id && edge.target === node.id)
     );
     
     if (childNodesExist) {
-      return; // Child nodes are already displayed
+      console.log("Child nodes already exist, skipping display");
+      return;
     }
     
     const childNodes = [];
@@ -123,9 +130,11 @@ const FlowchartPage = () => {
     const radius = 250;
     const childCount = bundleApp.childAppIds.length;
     
-    // Get the bundle node position
     const bundleNode = nodes.find(node => node.id === bundleApp.id);
-    if (!bundleNode) return;
+    if (!bundleNode) {
+      console.log("Could not find bundle node in nodes array");
+      return;
+    }
     
     const centerX = bundleNode.position.x;
     const centerY = bundleNode.position.y;
@@ -133,7 +142,6 @@ const FlowchartPage = () => {
     bundleApp.childAppIds.forEach((childId, index) => {
       const childApp = apps.find(a => a.id === childId);
       if (childApp) {
-        // Calculate position in a circle around the bundle
         const angle = (index / childCount) * 2 * Math.PI;
         const x = centerX + radius * Math.cos(angle);
         const y = centerY + radius * Math.sin(angle);
@@ -163,7 +171,6 @@ const FlowchartPage = () => {
         
         childNodes.push(childNode);
         
-        // Add edge from bundle to child
         childEdges.push({
           id: `${bundleApp.id}-${childApp.id}`,
           source: bundleApp.id,
@@ -174,17 +181,17 @@ const FlowchartPage = () => {
       }
     });
     
+    console.log(`Adding ${childNodes.length} child nodes and ${childEdges.length} edges`);
     setNodes(nodes => [...nodes, ...childNodes]);
     setEdges(edges => [...edges, ...childEdges]);
   }, [apps, nodes, edges, setNodes, setEdges]);
 
-  // Add a bundle node to the center
   const handleAddBundleNode = useCallback((app) => {
-    // Clear existing nodes and edges
+    console.log(`Adding bundle node for app: ${app.id}`, app);
+    
     setNodes([]);
     setEdges([]);
     
-    // Add the bundle node at center
     const bundleNode = {
       id: app.id,
       type: 'default',
@@ -212,65 +219,64 @@ const FlowchartPage = () => {
     setSelectedBundleId(app.id);
     setShowAppsCircle(true);
     
-    // If the app has childAppIds, show them in a circle
     if (app.childAppIds && app.childAppIds.length > 0) {
-      const childNodes = [];
-      const childEdges = [];
-      
-      const radius = 250;
-      const childCount = app.childAppIds.length;
-      
-      app.childAppIds.forEach((childId, index) => {
-        const childApp = apps.find(a => a.id === childId);
-        if (childApp) {
-          // Calculate position in a circle around the bundle
-          const angle = (index / childCount) * 2 * Math.PI;
-          const x = 400 + radius * Math.cos(angle);
-          const y = 300 + radius * Math.sin(angle);
-          
-          const childNode = {
-            id: childApp.id,
-            type: 'default',
-            data: { 
-              label: (
-                <div className="flex flex-col items-center">
-                  <img 
-                    src={childApp.logoUrl} 
-                    alt={childApp.title}
-                    className="w-8 h-8 mb-1 object-contain"
-                  />
-                  <div className="text-sm font-medium">{childApp.title}</div>
-                </div>
-              ) 
-            },
-            position: { x, y },
-            style: {
-              width: 150,
-              background: '#ffffff',
-              border: '1px solid #e5e7eb'
-            }
-          };
-          
-          childNodes.push(childNode);
-          
-          // Add edge from bundle to child
-          childEdges.push({
-            id: `${app.id}-${childApp.id}`,
-            source: app.id,
-            target: childApp.id,
-            animated: true,
-            style: { stroke: '#3b82f6' } as EdgeStyle
-          });
-        }
-      });
-      
-      setNodes(nodes => [...nodes, ...childNodes]);
-      setEdges(childEdges);
+      setTimeout(() => {
+        const childNodes = [];
+        const childEdges = [];
+        
+        const radius = 250;
+        const childCount = app.childAppIds.length;
+        
+        app.childAppIds.forEach((childId, index) => {
+          const childApp = apps.find(a => a.id === childId);
+          if (childApp) {
+            const angle = (index / childCount) * 2 * Math.PI;
+            const x = 400 + radius * Math.cos(angle);
+            const y = 300 + radius * Math.sin(angle);
+            
+            const childNode = {
+              id: childApp.id,
+              type: 'default',
+              data: { 
+                label: (
+                  <div className="flex flex-col items-center">
+                    <img 
+                      src={childApp.logoUrl} 
+                      alt={childApp.title}
+                      className="w-8 h-8 mb-1 object-contain"
+                    />
+                    <div className="text-sm font-medium">{childApp.title}</div>
+                  </div>
+                ) 
+              },
+              position: { x, y },
+              style: {
+                width: 150,
+                background: '#ffffff',
+                border: '1px solid #e5e7eb'
+              }
+            };
+            
+            childNodes.push(childNode);
+            
+            childEdges.push({
+              id: `${app.id}-${childApp.id}`,
+              source: app.id,
+              target: childApp.id,
+              animated: true,
+              style: { stroke: '#3b82f6' } as EdgeStyle
+            });
+          }
+        });
+        
+        console.log(`Adding ${childNodes.length} child nodes and ${childEdges.length} edges for initial bundle`);
+        setNodes(nodes => [...nodes, ...childNodes]);
+        setEdges(childEdges);
+      }, 100);
     }
   }, [apps, setNodes, setEdges]);
 
   const handleAddNode = useCallback((app) => {
-    // Calculate a position that's not occupied by other nodes
     const xPos = Math.random() * 500 + 100;
     const yPos = Math.random() * 500 + 100;
 
@@ -300,11 +306,10 @@ const FlowchartPage = () => {
     setNodes(nds => [...nds, newNode]);
     setIsAddingNode(false);
     
-    // If it's a bundle app, automatically display its child apps
     if (app.isBundle && app.childAppIds && app.childAppIds.length > 0) {
-      // We need to wait for the node to be added before we can display its child apps
       setTimeout(() => {
-        displayBundleChildApps(app);
+        const updatedApp = {...app};
+        displayBundleChildApps(updatedApp);
       }, 100);
     }
   }, [setNodes, displayBundleChildApps]);
@@ -312,7 +317,6 @@ const FlowchartPage = () => {
   const handleDeleteNode = useCallback(() => {
     if (itemToDelete.type === 'node') {
       setNodes(nodes => nodes.filter(node => node.id !== itemToDelete.id));
-      // Also remove associated edges
       setEdges(edges => edges.filter(edge => 
         edge.source !== itemToDelete.id && edge.target !== itemToDelete.id
       ));
@@ -551,7 +555,6 @@ const FlowchartPage = () => {
         </div>
       </main>
 
-      {/* App Details Dialog */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -573,7 +576,6 @@ const FlowchartPage = () => {
             <div className="space-y-4">
               <p className="text-sm">{selectedApp.description}</p>
               
-              {/* Connected Apps */}
               {selectedApp.connectedApps?.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium mb-2">Integrates with:</h3>
@@ -591,7 +593,6 @@ const FlowchartPage = () => {
                 </div>
               )}
               
-              {/* Child Apps */}
               {selectedApp.childAppIds?.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium mb-2">Includes:</h3>
@@ -609,7 +610,6 @@ const FlowchartPage = () => {
                 </div>
               )}
               
-              {/* Replacement Options */}
               {selectedApp.replacementOptions?.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium mb-2">Can be replaced by:</h3>
@@ -660,7 +660,6 @@ const FlowchartPage = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Add App Dialog */}
       <Dialog open={isAddingNode} onOpenChange={setIsAddingNode}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -696,7 +695,6 @@ const FlowchartPage = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Edge Edit Dialog */}
       <Dialog open={openEdgeDialog} onOpenChange={setOpenEdgeDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -758,7 +756,6 @@ const FlowchartPage = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Create Connection Dialog */}
       <Dialog open={connectDialogOpen} onOpenChange={setConnectDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -876,7 +873,6 @@ const FlowchartPage = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
