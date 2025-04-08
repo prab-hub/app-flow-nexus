@@ -2,6 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import AppCategorySelector, { AppCategory } from './AppCategorySelector';
 
 interface AppDetailsDialogProps {
   open: boolean;
@@ -10,6 +11,8 @@ interface AppDetailsDialogProps {
   isEditing: boolean;
   onDelete: (item: { type: string, id: string }) => void;
   apps: any[];
+  appCategory: AppCategory;
+  onCategoryChange: (appId: string, category: AppCategory) => void;
 }
 
 const AppDetailsDialog: React.FC<AppDetailsDialogProps> = ({
@@ -18,7 +21,9 @@ const AppDetailsDialog: React.FC<AppDetailsDialogProps> = ({
   selectedApp,
   isEditing,
   onDelete,
-  apps
+  apps,
+  appCategory,
+  onCategoryChange
 }) => {
   if (!selectedApp) return null;
 
@@ -88,6 +93,13 @@ const AppDetailsDialog: React.FC<AppDetailsDialogProps> = ({
                 })}
               </div>
             </div>
+          )}
+          
+          {isEditing && (
+            <AppCategorySelector 
+              selectedCategory={appCategory} 
+              onChange={(category) => onCategoryChange(selectedApp.id, category)} 
+            />
           )}
           
           <div className="pt-2">

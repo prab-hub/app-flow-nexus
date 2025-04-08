@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { useAppContext } from '@/context/AppContext';
@@ -33,7 +33,8 @@ const FlowchartPage = () => {
     handleCreateConnection,
     resetFlow,
     edgeType,
-    setEdgeType
+    setEdgeType,
+    updateNodesStyle
   } = useFlowchart();
   
   const {
@@ -63,8 +64,18 @@ const FlowchartPage = () => {
     setConnectDialogOpen,
     filteredApps,
     onNodeClick: baseOnNodeClick,
-    onEdgeClick
+    onEdgeClick,
+    appCategories,
+    currentAppCategory,
+    handleCategoryChange
   } = useFlowchartDialogs();
+
+  // Update node styles when app categories change
+  useEffect(() => {
+    if (nodes.length > 0) {
+      updateNodesStyle(appCategories);
+    }
+  }, [appCategories, nodes, updateNodesStyle]);
 
   // Wrapping callbacks to pass the right context
   const onNodeClick = useCallback((event, node) => {
@@ -78,9 +89,13 @@ const FlowchartPage = () => {
   }, [handleEdgeTypeChange, selectedEdge, setOpenEdgeDialog]);
 
   const handleAddNodeAndClose = useCallback((app) => {
-    handleAddNode(app);
+    handleAddNode(app, appCategories);
     setIsAddingNode(false);
-  }, [handleAddNode, setIsAddingNode]);
+  }, [handleAddNode, setIsAddingNode, appCategories]);
+
+  const handleAddBundleNodeWithCategories = useCallback((app) => {
+    handleAddBundleNode(app, appCategories);
+  }, [handleAddBundleNode, appCategories]);
 
   const handleCreateConnectionAndClose = useCallback(() => {
     if (handleCreateConnection(connectionSource, connectionTarget, edgeType)) {
@@ -110,7 +125,7 @@ const FlowchartPage = () => {
         
         <div className="container px-4 py-8">
           {nodes.length === 0 ? (
-            <BundleSelector bundleApps={bundleApps} onSelectBundle={handleAddBundleNode} />
+            <BundleSelector bundleApps={bundleApps} onSelectBundle={handleAddBundleNodeWithCategories} />
           ) : (
             <FlowchartCanvas 
               nodes={nodes}
@@ -138,6 +153,38 @@ const FlowchartPage = () => {
               }
             </p>
           </div>
+          
+          {isEditing && nodes.length > 0 && (
+            <div className="mt-6 bg-muted p-4 rounded-lg">
+              <h3 className="text-sm font-medium mb-2">Subscription Categories Legend:</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                  <span className="text-xs">Need</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span className="text-xs">Want</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <span className="text-xs">Looking to buy</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span className="text-xs">Ending subscription</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                  <span className="text-xs">Favorite</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-gray-300"></div>
+                  <span className="text-xs">None</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
@@ -148,6 +195,8 @@ const FlowchartPage = () => {
         isEditing={isEditing}
         onDelete={setItemToDelete}
         apps={apps}
+        appCategory={currentAppCategory}
+        onCategoryChange={handleCategoryChange}
       />
       
       <AddAppDialog 

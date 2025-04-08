@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { useAppContext } from '@/context/AppContext';
+import { AppCategory } from '@/components/flowchart/AppCategorySelector';
 
 export const useFlowchartDialogs = () => {
   const { apps } = useAppContext();
@@ -16,6 +17,8 @@ export const useFlowchartDialogs = () => {
   const [connectionSource, setConnectionSource] = useState(null);
   const [connectionTarget, setConnectionTarget] = useState(null);
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [appCategories, setAppCategories] = useState<Record<string, AppCategory>>({});
+  const [currentAppCategory, setCurrentAppCategory] = useState<AppCategory>('none');
 
   const filteredApps = apps.filter(app => 
     app.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -27,33 +30,40 @@ export const useFlowchartDialogs = () => {
       const appData = apps.find(app => app.id === node.id);
       if (appData) {
         setSelectedApp(appData);
+        setCurrentAppCategory(appCategories[appData.id] || 'none');
         setOpenDialog(true);
       }
     } else {
       const appData = apps.find(app => app.id === node.id);
-      if (appData && appData.isBundle) {
-        console.log(`Node clicked: ${node.id}, appData:`, appData);
+      if (appData) {
+        setSelectedApp(appData);
+        setCurrentAppCategory(appCategories[appData.id] || 'none');
+        setOpenDialog(true);
         
-        const childNodesExist = appData.childAppIds && appData.childAppIds.some(childId => 
-          nodes.some(n => n.id === childId) && 
-          edges.some(e => e.source === appData.id && e.target === childId)
-        );
-        
-        console.log(`Child nodes exist? ${childNodesExist}`);
-        
-        if (!childNodesExist) {
-          const nodeExists = nodes.some(n => n.id === appData.id);
-          console.log(`Node exists in nodes array? ${nodeExists}`);
+        if (appData.isBundle) {
+          console.log(`Node clicked: ${node.id}, appData:`, appData);
           
-          if (nodeExists) {
-            displayBundleChildApps(appData);
-          } else {
-            console.error(`Cannot find node ${appData.id} in nodes array:`, nodes);
+          const childNodesExist = appData.childAppIds && appData.childAppIds.some(childId => 
+            nodes.some(n => n.id === childId) && 
+            edges.some(e => e.source === appData.id && e.target === childId)
+          );
+          
+          console.log(`Child nodes exist? ${childNodesExist}`);
+          
+          if (!childNodesExist) {
+            const nodeExists = nodes.some(n => n.id === appData.id);
+            console.log(`Node exists in nodes array? ${nodeExists}`);
+            
+            if (nodeExists) {
+              displayBundleChildApps(appData);
+            } else {
+              console.error(`Cannot find node ${appData.id} in nodes array:`, nodes);
+            }
           }
         }
       }
     }
-  }, []);
+  }, [appCategories]);
 
   const onEdgeClick = useCallback((event, edge) => {
     if (isEditing) {
@@ -62,6 +72,14 @@ export const useFlowchartDialogs = () => {
       setOpenEdgeDialog(true);
     }
   }, [isEditing]);
+
+  const handleCategoryChange = useCallback((appId: string, category: AppCategory) => {
+    setAppCategories(prev => ({
+      ...prev,
+      [appId]: category
+    }));
+    setCurrentAppCategory(category);
+  }, []);
 
   return {
     selectedApp,
@@ -90,6 +108,9 @@ export const useFlowchartDialogs = () => {
     setConnectDialogOpen,
     filteredApps,
     onNodeClick,
-    onEdgeClick
+    onEdgeClick,
+    appCategories,
+    currentAppCategory,
+    handleCategoryChange
   };
 };

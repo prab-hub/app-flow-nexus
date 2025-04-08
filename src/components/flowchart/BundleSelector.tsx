@@ -41,6 +41,9 @@ const BundleSelector: React.FC<BundleSelectorProps> = ({ bundleApps, onSelectBun
           </Button>
         ))}
       </div>
+      <p className="text-sm text-muted-foreground mt-8 max-w-md text-center">
+        After adding apps to your flowchart, you can categorize them as needs, wants, favorites, and more by clicking on them in edit mode.
+      </p>
     </div>
   );
 };

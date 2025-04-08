@@ -57,7 +57,7 @@ const FlowchartCanvas: React.FC<FlowchartCanvasProps> = ({
       >
         <Panel position="top-left" className="bg-background p-3 rounded-md shadow-sm border">
           <div className="text-sm mb-2">
-            <span className="font-semibold">Legend:</span>
+            <span className="font-semibold">Connections:</span>
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">

@@ -2,6 +2,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNodesState, useEdgesState, addEdge, Node, Edge } from '@xyflow/react';
 import { useAppContext } from '@/context/AppContext';
+import { AppCategory } from '@/components/flowchart/AppCategorySelector';
 
 interface EdgeStyle {
   stroke: string;
@@ -31,6 +32,57 @@ export const useFlowchart = () => {
     )),
     [setEdges, edgeType]
   );
+
+  const getNodeStyleForCategory = (appId: string, appCategories: Record<string, AppCategory>, isBundle: boolean): React.CSSProperties => {
+    const category = appCategories[appId] || 'none';
+    let borderColor = isBundle ? '#93c5fd' : '#e5e7eb';
+    let backgroundColor = isBundle ? '#f0f9ff' : '#ffffff';
+    
+    switch (category) {
+      case 'need':
+        borderColor = '#10b981'; // emerald-500
+        backgroundColor = '#ecfdf5'; // emerald-50
+        break;
+      case 'want':
+        borderColor = '#3b82f6'; // blue-500
+        backgroundColor = '#eff6ff'; // blue-50
+        break;
+      case 'toBuy':
+        borderColor = '#f59e0b'; // amber-500
+        backgroundColor = '#fffbeb'; // amber-50
+        break;
+      case 'ending':
+        borderColor = '#ef4444'; // red-500
+        backgroundColor = '#fef2f2'; // red-50
+        break;
+      case 'favorite':
+        borderColor = '#8b5cf6'; // purple-500
+        backgroundColor = '#f5f3ff'; // purple-50
+        break;
+      default:
+        // Use default styles
+        break;
+    }
+    
+    return {
+      width: 150,
+      background: backgroundColor,
+      border: `1px solid ${borderColor}`
+    };
+  };
+
+  const updateNodesStyle = useCallback((appCategories: Record<string, AppCategory>) => {
+    setNodes(nodes => nodes.map(node => {
+      const app = apps.find(a => a.id === node.id);
+      if (app) {
+        return {
+          ...node,
+          style: getNodeStyleForCategory(node.id, appCategories, app.isBundle)
+        };
+      }
+      return node;
+    }));
+  }, [apps, setNodes]);
 
   const handleEdgeTypeChange = useCallback((type) => {
     setEdgeType(type);
@@ -74,7 +126,7 @@ export const useFlowchart = () => {
     };
   }, [setEdges]);
 
-  const displayBundleChildApps = useCallback((bundleApp) => {
+  const displayBundleChildApps = useCallback((bundleApp, appCategories = {}) => {
     if (!bundleApp.childAppIds || bundleApp.childAppIds.length === 0) {
       console.log(`Bundle app ${bundleApp.id} has no child apps`);
       return;
@@ -127,11 +179,7 @@ export const useFlowchart = () => {
             ) 
           },
           position: { x, y },
-          style: {
-            width: 150,
-            background: '#ffffff',
-            border: '1px solid #e5e7eb'
-          }
+          style: getNodeStyleForCategory(childApp.id, appCategories, false)
         };
         
         childNodesToAdd.push(childNode);
@@ -154,7 +202,7 @@ export const useFlowchart = () => {
     }
   }, [apps, nodes, edges, setNodes, setEdges]);
 
-  const handleAddBundleNode = useCallback((app) => {
+  const handleAddBundleNode = useCallback((app, appCategories = {}) => {
     console.log(`Adding bundle node for app: ${app.id}`, app);
     
     setNodes([]);
@@ -176,11 +224,7 @@ export const useFlowchart = () => {
         ) 
       },
       position: { x: 400, y: 300 },
-      style: {
-        width: 150,
-        background: '#f0f9ff',
-        border: '1px solid #93c5fd'
-      }
+      style: getNodeStyleForCategory(app.id, appCategories, true)
     };
     
     setNodes([bundleNode]);
@@ -217,11 +261,7 @@ export const useFlowchart = () => {
               ) 
             },
             position: { x, y },
-            style: {
-              width: 150,
-              background: '#ffffff',
-              border: '1px solid #e5e7eb'
-            }
+            style: getNodeStyleForCategory(childApp.id, appCategories, false)
           };
           
           childNodes.push(childNode);
@@ -245,7 +285,7 @@ export const useFlowchart = () => {
     }
   }, [apps, setNodes, setEdges]);
 
-  const handleAddNode = useCallback((app) => {
+  const handleAddNode = useCallback((app, appCategories = {}) => {
     const xPos = Math.random() * 500 + 100;
     const yPos = Math.random() * 500 + 100;
 
@@ -265,11 +305,7 @@ export const useFlowchart = () => {
         ) 
       },
       position: { x: xPos, y: yPos },
-      style: {
-        width: 150,
-        background: app.isBundle ? '#f0f9ff' : '#ffffff',
-        border: app.isBundle ? '1px solid #93c5fd' : '1px solid #e5e7eb'
-      }
+      style: getNodeStyleForCategory(app.id, appCategories, app.isBundle)
     };
 
     setNodes(nds => [...nds, newNode]);
@@ -280,7 +316,7 @@ export const useFlowchart = () => {
       console.log(`Bundle node ${app.id} exists after adding? ${bundleNodeExists}`);
       
       if (bundleNodeExists) {
-        displayBundleChildApps(app);
+        displayBundleChildApps(app, appCategories);
       }
     }
     
@@ -361,6 +397,7 @@ export const useFlowchart = () => {
     selectedBundleId,
     showAppsCircle,
     edgeType,
-    setEdgeType
+    setEdgeType,
+    updateNodesStyle
   };
 };
