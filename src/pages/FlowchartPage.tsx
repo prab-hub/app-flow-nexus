@@ -73,19 +73,26 @@ const FlowchartPage = () => {
         setOpenDialog(true);
       }
     } else {
-      if (!isEditing) {
-        setIsEditing(true);
-      }
-      
       const appData = apps.find(app => app.id === node.id);
       if (appData && appData.isBundle) {
-        const childNodesExist = nodes.some(n => 
-          appData.childAppIds && appData.childAppIds.includes(n.id) && 
-          edges.some(e => e.source === appData.id && e.target === n.id)
+        console.log(`Node clicked: ${node.id}, appData:`, appData);
+        
+        const childNodesExist = appData.childAppIds && appData.childAppIds.some(childId => 
+          nodes.some(n => n.id === childId) && 
+          edges.some(e => e.source === appData.id && e.target === childId)
         );
         
+        console.log(`Child nodes exist? ${childNodesExist}`);
+        
         if (!childNodesExist) {
-          displayBundleChildApps(appData);
+          const nodeExists = nodes.some(n => n.id === appData.id);
+          console.log(`Node exists in nodes array? ${nodeExists}`);
+          
+          if (nodeExists) {
+            displayBundleChildApps(appData);
+          } else {
+            console.error(`Cannot find node ${appData.id} in nodes array:`, nodes);
+          }
         }
       }
     }
@@ -114,32 +121,29 @@ const FlowchartPage = () => {
     
     console.log(`Displaying child apps for bundle: ${bundleApp.id}`, bundleApp.childAppIds);
     
-    const childNodesExist = nodes.some(node => 
-      bundleApp.childAppIds.includes(node.id) && 
-      edges.some(edge => edge.source === bundleApp.id && edge.target === node.id)
-    );
-    
-    if (childNodesExist) {
-      console.log("Child nodes already exist, skipping display");
-      return;
-    }
-    
-    const childNodes = [];
-    const childEdges = [];
-    
-    const radius = 250;
-    const childCount = bundleApp.childAppIds.length;
-    
     const bundleNode = nodes.find(node => node.id === bundleApp.id);
     if (!bundleNode) {
       console.log("Could not find bundle node in nodes array");
       return;
     }
     
+    const existingChildNodeIds = nodes
+      .filter(node => edges.some(edge => edge.source === bundleApp.id && edge.target === node.id))
+      .map(node => node.id);
+    
+    console.log("Existing child node IDs:", existingChildNodeIds);
+    
+    const childNodesToAdd = [];
+    const childEdgesToAdd = [];
+    
+    const radius = 250;
+    const childAppIds = bundleApp.childAppIds.filter(id => !existingChildNodeIds.includes(id));
+    const childCount = childAppIds.length;
+    
     const centerX = bundleNode.position.x;
     const centerY = bundleNode.position.y;
     
-    bundleApp.childAppIds.forEach((childId, index) => {
+    childAppIds.forEach((childId, index) => {
       const childApp = apps.find(a => a.id === childId);
       if (childApp) {
         const angle = (index / childCount) * 2 * Math.PI;
@@ -169,9 +173,9 @@ const FlowchartPage = () => {
           }
         };
         
-        childNodes.push(childNode);
+        childNodesToAdd.push(childNode);
         
-        childEdges.push({
+        childEdgesToAdd.push({
           id: `${bundleApp.id}-${childApp.id}`,
           source: bundleApp.id,
           target: childApp.id,
@@ -181,9 +185,12 @@ const FlowchartPage = () => {
       }
     });
     
-    console.log(`Adding ${childNodes.length} child nodes and ${childEdges.length} edges`);
-    setNodes(nodes => [...nodes, ...childNodes]);
-    setEdges(edges => [...edges, ...childEdges]);
+    console.log(`Adding ${childNodesToAdd.length} new child nodes and ${childEdgesToAdd.length} edges`);
+    
+    if (childNodesToAdd.length > 0) {
+      setNodes(currentNodes => [...currentNodes, ...childNodesToAdd]);
+      setEdges(currentEdges => [...currentEdges, ...childEdgesToAdd]);
+    }
   }, [apps, nodes, edges, setNodes, setEdges]);
 
   const handleAddBundleNode = useCallback((app) => {
@@ -220,59 +227,60 @@ const FlowchartPage = () => {
     setShowAppsCircle(true);
     
     if (app.childAppIds && app.childAppIds.length > 0) {
-      setTimeout(() => {
-        const childNodes = [];
-        const childEdges = [];
-        
-        const radius = 250;
-        const childCount = app.childAppIds.length;
-        
-        app.childAppIds.forEach((childId, index) => {
-          const childApp = apps.find(a => a.id === childId);
-          if (childApp) {
-            const angle = (index / childCount) * 2 * Math.PI;
-            const x = 400 + radius * Math.cos(angle);
-            const y = 300 + radius * Math.sin(angle);
-            
-            const childNode = {
-              id: childApp.id,
-              type: 'default',
-              data: { 
-                label: (
-                  <div className="flex flex-col items-center">
-                    <img 
-                      src={childApp.logoUrl} 
-                      alt={childApp.title}
-                      className="w-8 h-8 mb-1 object-contain"
-                    />
-                    <div className="text-sm font-medium">{childApp.title}</div>
-                  </div>
-                ) 
-              },
-              position: { x, y },
-              style: {
-                width: 150,
-                background: '#ffffff',
-                border: '1px solid #e5e7eb'
-              }
-            };
-            
-            childNodes.push(childNode);
-            
-            childEdges.push({
-              id: `${app.id}-${childApp.id}`,
-              source: app.id,
-              target: childApp.id,
-              animated: true,
-              style: { stroke: '#3b82f6' } as EdgeStyle
-            });
-          }
-        });
-        
-        console.log(`Adding ${childNodes.length} child nodes and ${childEdges.length} edges for initial bundle`);
-        setNodes(nodes => [...nodes, ...childNodes]);
+      const childNodes = [];
+      const childEdges = [];
+      
+      const radius = 250;
+      const childCount = app.childAppIds.length;
+      
+      app.childAppIds.forEach((childId, index) => {
+        const childApp = apps.find(a => a.id === childId);
+        if (childApp) {
+          const angle = (index / childCount) * 2 * Math.PI;
+          const x = 400 + radius * Math.cos(angle);
+          const y = 300 + radius * Math.sin(angle);
+          
+          const childNode = {
+            id: childApp.id,
+            type: 'default',
+            data: { 
+              label: (
+                <div className="flex flex-col items-center">
+                  <img 
+                    src={childApp.logoUrl} 
+                    alt={childApp.title}
+                    className="w-8 h-8 mb-1 object-contain"
+                  />
+                  <div className="text-sm font-medium">{childApp.title}</div>
+                </div>
+              ) 
+            },
+            position: { x, y },
+            style: {
+              width: 150,
+              background: '#ffffff',
+              border: '1px solid #e5e7eb'
+            }
+          };
+          
+          childNodes.push(childNode);
+          
+          childEdges.push({
+            id: `${app.id}-${childApp.id}`,
+            source: app.id,
+            target: childApp.id,
+            animated: true,
+            style: { stroke: '#3b82f6' } as EdgeStyle
+          });
+        }
+      });
+      
+      console.log(`Adding ${childNodes.length} child nodes and ${childEdges.length} edges for initial bundle`);
+      
+      if (childNodes.length > 0) {
+        setNodes(currentNodes => [...currentNodes, ...childNodes]);
         setEdges(childEdges);
-      }, 100);
+      }
     }
   }, [apps, setNodes, setEdges]);
 
@@ -308,11 +316,16 @@ const FlowchartPage = () => {
     
     if (app.isBundle && app.childAppIds && app.childAppIds.length > 0) {
       setTimeout(() => {
-        const updatedApp = {...app};
-        displayBundleChildApps(updatedApp);
+        const updatedNodes = [...nodes, newNode];
+        const bundleNodeExists = updatedNodes.some(n => n.id === app.id);
+        console.log(`Bundle node ${app.id} exists after adding? ${bundleNodeExists}`);
+        
+        if (bundleNodeExists) {
+          displayBundleChildApps(app);
+        }
       }, 100);
     }
-  }, [setNodes, displayBundleChildApps]);
+  }, [nodes, setNodes, displayBundleChildApps]);
 
   const handleDeleteNode = useCallback(() => {
     if (itemToDelete.type === 'node') {
