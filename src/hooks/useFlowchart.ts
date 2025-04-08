@@ -71,14 +71,18 @@ export const useFlowchart = () => {
     return {
       width: 150,
       background: backgroundColor,
-      border: `1px solid ${borderColor}`
+      border: `2px solid ${borderColor}`, // Make border thicker for better visibility
+      padding: '10px',
+      borderRadius: '8px'
     };
   };
 
   const updateNodesStyle = useCallback((appCategories: Record<string, AppCategory>) => {
+    console.log("Updating node styles with categories:", appCategories);
     setNodes(nodes => nodes.map(node => {
       const app = apps.find(a => a.id === node.id);
       if (app) {
+        console.log(`Updating style for node ${node.id}, category: ${appCategories[node.id] || 'none'}`);
         return {
           ...node,
           style: getNodeStyleForCategory(node.id, appCategories, app.isBundle)

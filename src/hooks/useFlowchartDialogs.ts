@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { AppCategory } from '@/components/flowchart/AppCategorySelector';
 
@@ -55,7 +55,7 @@ export const useFlowchartDialogs = () => {
             console.log(`Node exists in nodes array? ${nodeExists}`);
             
             if (nodeExists) {
-              displayBundleChildApps(appData);
+              displayBundleChildApps(appData, appCategories);
             } else {
               console.error(`Cannot find node ${appData.id} in nodes array:`, nodes);
             }
@@ -74,10 +74,15 @@ export const useFlowchartDialogs = () => {
   }, [isEditing]);
 
   const handleCategoryChange = useCallback((appId: string, category: AppCategory) => {
-    setAppCategories(prev => ({
-      ...prev,
-      [appId]: category
-    }));
+    console.log(`Changing category for app ${appId} to ${category}`);
+    setAppCategories(prev => {
+      const updated = {
+        ...prev,
+        [appId]: category
+      };
+      console.log("Updated categories:", updated);
+      return updated;
+    });
     setCurrentAppCategory(category);
   }, []);
 

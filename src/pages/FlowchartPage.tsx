@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -72,10 +71,19 @@ const FlowchartPage = () => {
 
   // Update node styles when app categories change
   useEffect(() => {
-    if (nodes.length > 0) {
+    if (nodes.length > 0 && Object.keys(appCategories).length > 0) {
+      console.log("FlowchartPage: Categories changed, updating styles", appCategories);
       updateNodesStyle(appCategories);
     }
   }, [appCategories, nodes, updateNodesStyle]);
+
+  // Make sure to update styles when new nodes are added
+  useEffect(() => {
+    if (nodes.length > 0 && Object.keys(appCategories).length > 0) {
+      console.log("FlowchartPage: Nodes changed, updating styles", nodes.length);
+      updateNodesStyle(appCategories);
+    }
+  }, [nodes.length, appCategories, updateNodesStyle]);
 
   // Wrapping callbacks to pass the right context
   const onNodeClick = useCallback((event, node) => {
