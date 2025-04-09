@@ -14,6 +14,7 @@ export const useFlowchartDialogs = () => {
   const [openEdgeDialog, setOpenEdgeDialog] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState({ type: '', id: '' });
+  const [deletionType, setDeletionType] = useState<'single' | 'bundleOnly' | 'entireBundle'>('single');
   const [connectionSource, setConnectionSource] = useState(null);
   const [connectionTarget, setConnectionTarget] = useState(null);
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
@@ -86,6 +87,19 @@ export const useFlowchartDialogs = () => {
     setCurrentAppCategory(category);
   }, []);
 
+  const handleDeleteItem = useCallback((item: { type: string, id: string }) => {
+    const appData = apps.find(app => app.id === item.id);
+    if (appData && appData.isBundle && appData.childAppIds && appData.childAppIds.length > 0) {
+      setItemToDelete(item);
+      setDeleteConfirmOpen(true);
+    } else {
+      // For non-bundle nodes, delete directly
+      setItemToDelete(item);
+      setDeletionType('single');
+      setDeleteConfirmOpen(true);
+    }
+  }, [apps]);
+
   return {
     selectedApp,
     setSelectedApp,
@@ -105,6 +119,8 @@ export const useFlowchartDialogs = () => {
     setDeleteConfirmOpen,
     itemToDelete,
     setItemToDelete,
+    deletionType,
+    setDeletionType,
     connectionSource,
     setConnectionSource,
     connectionTarget,
@@ -116,6 +132,7 @@ export const useFlowchartDialogs = () => {
     onEdgeClick,
     appCategories,
     currentAppCategory,
-    handleCategoryChange
+    handleCategoryChange,
+    handleDeleteItem
   };
 };

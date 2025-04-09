@@ -1,14 +1,17 @@
-
-import React, { useRef } from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
   ReactFlow,
   MiniMap,
   Controls,
   Background,
   ConnectionLineType,
-  Panel
+  Panel,
+  useReactFlow,
+  Node
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import FlowchartContextMenu from './FlowchartContextMenu';
+import { useAppContext } from '@/context/AppContext';
 
 interface FlowchartCanvasProps {
   nodes: any[];
@@ -23,7 +26,44 @@ interface FlowchartCanvasProps {
   setIsEditing: (value: boolean) => void;
   setIsAddingNode: (value: boolean) => void;
   setConnectDialogOpen: (value: boolean) => void;
+  onDeleteNode: (id: string) => void;
+  onDeleteBundleOnly: (id: string) => void;
+  onDeleteEntireBundle: (id: string) => void;
 }
+
+const CustomNode = ({ 
+  id, 
+  data, 
+  isConnectable, 
+  onDeleteNode,
+  onDeleteBundleOnly,
+  onDeleteEntireBundle,
+  ...props 
+}) => {
+  const { apps } = useAppContext();
+  const app = apps.find(app => app.id === id);
+  const isBundle = app?.isBundle || false;
+  const hasChildApps = app?.childAppIds?.length > 0 || false;
+  
+  const nodeContent = (
+    <div style={props.style} className="custom-node">
+      {data.label}
+    </div>
+  );
+
+  return (
+    <FlowchartContextMenu
+      nodeId={id}
+      isBundle={isBundle}
+      hasChildApps={hasChildApps}
+      onDeleteNode={onDeleteNode}
+      onDeleteBundleOnly={onDeleteBundleOnly}
+      onDeleteEntireBundle={onDeleteEntireBundle}
+    >
+      {nodeContent}
+    </FlowchartContextMenu>
+  );
+};
 
 const FlowchartCanvas: React.FC<FlowchartCanvasProps> = ({
   nodes,
@@ -37,20 +77,41 @@ const FlowchartCanvas: React.FC<FlowchartCanvasProps> = ({
   resetFlow,
   setIsEditing,
   setIsAddingNode,
-  setConnectDialogOpen
+  setConnectDialogOpen,
+  onDeleteNode,
+  onDeleteBundleOnly,
+  onDeleteEntireBundle
 }) => {
   const reactFlowWrapper = useRef(null);
+  const { fitView } = useReactFlow();
+
+  const nodeTypes = {
+    default: useCallback(props => (
+      <CustomNode 
+        {...props} 
+        onDeleteNode={onDeleteNode}
+        onDeleteBundleOnly={onDeleteBundleOnly}
+        onDeleteEntireBundle={onDeleteEntireBundle}
+      />
+    ), [onDeleteNode, onDeleteBundleOnly, onDeleteEntireBundle])
+  };
+
+  const handleNodesChange = (changes) => {
+    onNodesChange(changes);
+    setTimeout(() => fitView({ padding: 0.2 }), 50);
+  };
 
   return (
     <div className="bg-background border rounded-lg h-[70vh]" ref={reactFlowWrapper}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
+        onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
+        nodeTypes={nodeTypes}
         connectionLineType={ConnectionLineType.SmoothStep}
         fitView
         deleteKeyCode="Delete"

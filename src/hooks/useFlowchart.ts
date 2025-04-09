@@ -306,6 +306,40 @@ export const useFlowchart = () => {
     }
   }, [setNodes, setEdges]);
 
+  const handleDeleteBundleOnly = useCallback((bundleId) => {
+    // Find all child nodes (preserve them)
+    const bundleApp = apps.find(app => app.id === bundleId);
+    if (!bundleApp || !bundleApp.childAppIds) return;
+
+    // Remove just the bundle node
+    setNodes(nodes => nodes.filter(node => node.id !== bundleId));
+    
+    // Remove edges connected to the bundle node but leave child nodes
+    setEdges(edges => edges.filter(edge => edge.source !== bundleId));
+    
+    console.log(`Removed bundle ${bundleId} but kept its children`);
+  }, [apps, setNodes, setEdges]);
+
+  const handleDeleteEntireBundle = useCallback((bundleId) => {
+    // Find all child nodes
+    const bundleApp = apps.find(app => app.id === bundleId);
+    if (!bundleApp || !bundleApp.childAppIds) return;
+
+    // Remove the bundle node AND all child nodes
+    setNodes(nodes => nodes.filter(node => 
+      node.id !== bundleId && !bundleApp.childAppIds.includes(node.id)
+    ));
+    
+    // Remove all edges connected to bundle and its children
+    setEdges(edges => edges.filter(edge => 
+      edge.source !== bundleId && 
+      !bundleApp.childAppIds.includes(edge.source) &&
+      !bundleApp.childAppIds.includes(edge.target)
+    ));
+    
+    console.log(`Removed entire bundle ${bundleId} with all children`);
+  }, [apps, setNodes, setEdges]);
+
   const handleCreateConnection = useCallback((connectionSource, connectionTarget, type) => {
     if (connectionSource && connectionTarget) {
       let style: EdgeStyle = { stroke: '#64748b' };
@@ -364,12 +398,15 @@ export const useFlowchart = () => {
     handleAddBundleNode,
     handleAddNode,
     handleDeleteNode,
+    handleDeleteBundleOnly,
+    handleDeleteEntireBundle,
     handleCreateConnection,
     resetFlow,
     selectedBundleId,
     showAppsCircle,
     edgeType,
     setEdgeType,
-    updateNodesStyle
+    updateNodesStyle,
+    getNodeStyleForCategory
   };
 };

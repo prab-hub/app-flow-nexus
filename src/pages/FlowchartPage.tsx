@@ -1,9 +1,11 @@
+
 import React, { useCallback, useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { useAppContext } from '@/context/AppContext';
 import { useFlowchart } from '@/hooks/useFlowchart';
 import { useFlowchartDialogs } from '@/hooks/useFlowchartDialogs';
+import { ReactFlowProvider } from '@xyflow/react';
 
 // Components
 import FlowchartCanvas from '@/components/flowchart/FlowchartCanvas';
@@ -29,6 +31,8 @@ const FlowchartPage = () => {
     handleAddBundleNode,
     handleAddNode,
     handleDeleteNode,
+    handleDeleteBundleOnly,
+    handleDeleteEntireBundle,
     handleCreateConnection,
     resetFlow,
     edgeType,
@@ -55,6 +59,8 @@ const FlowchartPage = () => {
     setDeleteConfirmOpen,
     itemToDelete,
     setItemToDelete,
+    deletionType,
+    setDeletionType,
     connectionSource,
     setConnectionSource,
     connectionTarget,
@@ -66,7 +72,8 @@ const FlowchartPage = () => {
     onEdgeClick,
     appCategories,
     currentAppCategory,
-    handleCategoryChange
+    handleCategoryChange,
+    handleDeleteItem
   } = useFlowchartDialogs();
 
   // Update node styles when app categories change
@@ -113,10 +120,50 @@ const FlowchartPage = () => {
     }
   }, [handleCreateConnection, connectionSource, connectionTarget, edgeType, setConnectionSource, setConnectionTarget, setConnectDialogOpen]);
 
+  // Handle deletion with appropriate method based on type
   const handleConfirmDelete = useCallback(() => {
-    handleDeleteNode(itemToDelete);
+    if (deletionType === 'bundleOnly') {
+      handleDeleteBundleOnly(itemToDelete.id);
+    } else if (deletionType === 'entireBundle') {
+      handleDeleteEntireBundle(itemToDelete.id);
+    } else {
+      handleDeleteNode(itemToDelete);
+    }
     setDeleteConfirmOpen(false);
-  }, [handleDeleteNode, itemToDelete, setDeleteConfirmOpen]);
+  }, [handleDeleteNode, handleDeleteBundleOnly, handleDeleteEntireBundle, itemToDelete, deletionType, setDeleteConfirmOpen]);
+
+  // Handle delete node when clicked via context menu
+  const handleContextMenuDeleteNode = useCallback((nodeId) => {
+    handleDeleteNode({ type: 'node', id: nodeId });
+  }, [handleDeleteNode]);
+
+  // Handle bundle deletions via context menu
+  const handleContextMenuDeleteBundleOnly = useCallback((nodeId) => {
+    handleDeleteBundleOnly(nodeId);
+  }, [handleDeleteBundleOnly]);
+
+  const handleContextMenuDeleteEntireBundle = useCallback((nodeId) => {
+    handleDeleteEntireBundle(nodeId);
+  }, [handleDeleteEntireBundle]);
+
+  // Check if item to delete is a bundle with children
+  const isBundleWithChildren = useCallback(() => {
+    if (itemToDelete.type !== 'node') return false;
+    
+    const app = apps.find(app => app.id === itemToDelete.id);
+    return app?.isBundle && app?.childAppIds?.length > 0;
+  }, [itemToDelete, apps]);
+
+  // Handle bundle deletion options
+  const handleDeleteBundleOnlyConfirm = useCallback(() => {
+    setDeletionType('bundleOnly');
+    handleConfirmDelete();
+  }, [setDeletionType, handleConfirmDelete]);
+
+  const handleDeleteEntireBundleConfirm = useCallback(() => {
+    setDeletionType('entireBundle');
+    handleConfirmDelete();
+  }, [setDeletionType, handleConfirmDelete]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -127,6 +174,7 @@ const FlowchartPage = () => {
             <h1 className="text-3xl md:text-4xl font-bold">App Relationships Flowchart</h1>
             <p className="text-muted-foreground mt-4 max-w-3xl">
               Visualize how different applications connect and work together. Click on any bundle app to see its components in a circle.
+              Right-click on nodes for additional options.
             </p>
           </div>
         </div>
@@ -135,28 +183,33 @@ const FlowchartPage = () => {
           {nodes.length === 0 ? (
             <BundleSelector bundleApps={bundleApps} onSelectBundle={handleAddBundleNodeWithCategories} />
           ) : (
-            <FlowchartCanvas 
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={onNodeClick}
-              onEdgeClick={onEdgeClick}
-              isEditing={isEditing}
-              resetFlow={resetFlow}
-              setIsEditing={setIsEditing}
-              setIsAddingNode={setIsAddingNode}
-              setConnectDialogOpen={setConnectDialogOpen}
-            />
+            <ReactFlowProvider>
+              <FlowchartCanvas 
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={onNodeClick}
+                onEdgeClick={onEdgeClick}
+                isEditing={isEditing}
+                resetFlow={resetFlow}
+                setIsEditing={setIsEditing}
+                setIsAddingNode={setIsAddingNode}
+                setConnectDialogOpen={setConnectDialogOpen}
+                onDeleteNode={handleContextMenuDeleteNode}
+                onDeleteBundleOnly={handleContextMenuDeleteBundleOnly}
+                onDeleteEntireBundle={handleContextMenuDeleteEntireBundle}
+              />
+            </ReactFlowProvider>
           )}
           
           <div className="mt-6 text-sm text-muted-foreground">
             <p>
               {isEditing 
-                ? "Edit mode: Click apps to select, drag to reposition. Use buttons to add apps or create connections."
+                ? "Edit mode: Click apps to select, right-click for deletion options, drag to reposition. Use buttons to add apps or create connections."
                 : nodes.length > 0 
-                  ? "Click on any app to see more details. Drag to reposition the view."
+                  ? "Click on any app to see more details. Right-click for options. Drag to reposition the view."
                   : "Select a bundle app above to see its components."
               }
             </p>
@@ -201,7 +254,7 @@ const FlowchartPage = () => {
         onOpenChange={setOpenDialog}
         selectedApp={selectedApp}
         isEditing={isEditing}
-        onDelete={setItemToDelete}
+        onDelete={handleDeleteItem}
         apps={apps}
         appCategory={currentAppCategory}
         onCategoryChange={handleCategoryChange}
@@ -243,6 +296,9 @@ const FlowchartPage = () => {
         onOpenChange={setDeleteConfirmOpen}
         itemToDelete={itemToDelete}
         onConfirmDelete={handleConfirmDelete}
+        onDeleteBundleOnly={handleDeleteBundleOnlyConfirm}
+        onDeleteEntireBundle={handleDeleteEntireBundleConfirm}
+        isBundleWithChildren={isBundleWithChildren()}
       />
       
       <Footer />

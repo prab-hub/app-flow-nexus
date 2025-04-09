@@ -2,6 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 import AppCategorySelector, { AppCategory } from './AppCategorySelector';
 
 interface AppDetailsDialogProps {
@@ -26,6 +27,11 @@ const AppDetailsDialog: React.FC<AppDetailsDialogProps> = ({
   onCategoryChange
 }) => {
   if (!selectedApp) return null;
+
+  const handleDeleteClick = () => {
+    onDelete({ type: 'node', id: selectedApp.id });
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,18 +124,10 @@ const AppDetailsDialog: React.FC<AppDetailsDialogProps> = ({
               <Button 
                 variant="destructive" 
                 size="sm"
-                onClick={() => {
-                  onDelete({ type: 'node', id: selectedApp.id });
-                  onOpenChange(false);
-                }}
-                className="w-full"
+                onClick={handleDeleteClick}
+                className="w-full flex items-center justify-center gap-2"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                  <line x1="10" y1="11" x2="10" y2="17"></line>
-                  <line x1="14" y1="11" x2="14" y2="17"></line>
-                </svg>
+                <Trash2 className="h-4 w-4" />
                 Remove from Flowchart
               </Button>
             </div>
