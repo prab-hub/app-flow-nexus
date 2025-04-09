@@ -36,7 +36,19 @@ const AppCard: React.FC<AppCardProps> = ({ app }) => {
         target.onerror = null; // Prevent infinite loop
       };
     } else {
-      target.src = '/placeholder.svg';
+      // Try publisher-specific logos for certain apps
+      if (app.publisher === 'Google') {
+        target.src = 'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg';
+      } else if (app.publisher === 'Microsoft') {
+        target.src = 'https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg';
+      } else if (app.publisher === 'Apple') {
+        target.src = 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg';
+      } else if (app.publisher === 'Adobe Inc.') {
+        target.src = 'https://upload.wikimedia.org/wikipedia/commons/a/ac/Creative_Cloud.svg';
+      } else {
+        target.src = '/placeholder.svg';
+      }
+      target.onerror = null; // Prevent infinite loop
     }
   };
 
